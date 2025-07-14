@@ -14,7 +14,7 @@ Our method enhances semantic consistency across multiple models via adaptive sub
 
 ---
 
-## 🎯 Attack Effectiveness (Line Chart)
+## 🎯 Attack Effectiveness
 
 <p align="center">
   <img src="./image/readme/fig1.png" alt="Attack Results" width="700"/>
@@ -62,5 +62,15 @@ To install dependencies, use:
 conda create -n vcp_attack python=3.9.21
 conda activate vcp_attack
 pip install -r requirements.txt
+```
 
+## 🚀 Running the Attack
+```bash
 python vcp_attack.py
+```
+---
+## 🧪 Evaluation
+```bash
+cd evaluation
+python evaluate_captions_1000.py
+```
