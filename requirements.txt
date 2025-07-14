@@ -1,0 +1,15 @@
+torch>=1.13.1
+torchvision>=0.14.1
+transformers>=4.36.2
+open_clip_torch>=2.20.0
+Pillow>=10.0.0
+numpy>=1.23.0
+pandas
+tqdm
+matplotlib
+scikit-learn
+pyyaml
+
+openai>=1.14.2
+google-generativeai>=0.4.0
+anthropic>=0.21.3
