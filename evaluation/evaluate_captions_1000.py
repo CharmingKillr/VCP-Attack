@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--attack_text_path", default="your text path", type=str)
 
-    parser.add_argument("--map_csv_path", default="self_target_classes.csv", type=str)
+    parser.add_argument("--map_csv_path", default="./self_target_classes.csv", type=str)
     parser.add_argument("--output_path", default="your output path", type=str)
 
     args = parser.parse_args()
