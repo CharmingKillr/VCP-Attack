@@ -76,10 +76,10 @@ python evaluate_captions_1000.py
 ```
 ## 🙏 Acknowledgements
 We gratefully acknowledge the open-source community and previous research efforts for their invaluable contributions. This project builds upon the foundations laid by the following works:
-https://github.com/mlfoundations/open_clip
-https://github.com/huggingface
-https://github.com/jiamingzhang94/AnyAttack
-https://github.com/VILA-Lab/M-Attack
-https://github.com/jiaxiaojunQAQ/FOA-Attack
-https://github.com/gq-max/AdvDiffVLM
-https://github.com/yunqing-me/AttackVLM
+- [**OpenCLIP**](https://github.com/mlfoundations/open_clip)
+- [**HuggingFace**](https://github.com/huggingface) 
+- [**AnyAttack**](https://github.com/jiamingzhang94/AnyAttack)
+- [**M-Attack**](https://github.com/VILA-Lab/M-Attack) 
+- [**FOA-Attack**](https://github.com/jiaxiaojunQAQ/FOA-Attack)
+- [**AdvDiffVLM**](https://github.com/gq-max/AdvDiffVLM) 
+- [**AttackVLM**](https://github.com/yunqing-me/AttackVLM)
