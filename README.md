@@ -65,7 +65,7 @@ pip install -r requirements.txt
 ```
 
 ## 🚀 Running the Attack
-To run the attack pipeline, make sure you have prepared both the dataset and the surrogate models as follows:
+To run the attack pipeline, make sure you have prepared both the datasets and the surrogate models as follows:
 
 ---
 ### 📂 Required Dataset
