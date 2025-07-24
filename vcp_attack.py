@@ -72,20 +72,16 @@ class DropPathBlock_trans(nn.Module):
         self.drop_prob = drop_prob
 
     def forward(self, hidden_states, *args, **kwargs):
-        # 先拿到一次真实的输出，来探测它到底是 tuple 还是 dataclass
+        
         real_out = self.block(hidden_states, *args, **kwargs)
         if not self.training or torch.rand(()) >= self.drop_prob:
-            # 正常执行
+            
             return real_out
 
-        # 下面是“丢弃”分支：把 hidden_states 原样放回去，
-        # 并且填充同样长度的 None，这样后面 layer_outputs[0] 拿到 hidden_states，layer_outputs[1] 拿到 None...
         if isinstance(real_out, tuple):
             L = len(real_out)
             return (hidden_states,) + (None,) * (L - 1)
         else:
-            # transformers 的 BaseModelOutput 系列都是 dataclass，有 .last_hidden_state/.hidden_states/.attentions
-            # 我们用一个简单的 hack：构造一个和它同类型的新对象，所有字段都设 hidden_states
             fields = {k: hidden_states for k in real_out.to_dict().keys()}
             return real_out.__class__(**fields)
 
@@ -103,10 +99,6 @@ class DropPathBlock(nn.Module):
             return self.block(x, *args, **kwargs)
 
 class RegularizedTransformersCLIPWrapper(nn.Module):
-    """
-    将 HuggingFace CLIPModel 的视觉主干注入 DropPath + PatchDrop
-    并对外暴露 get_image_features 与 HF CLIPModel 接口一致。
-    """
     def __init__(
         self,
         hf_clip: CLIPModel,
@@ -120,29 +112,24 @@ class RegularizedTransformersCLIPWrapper(nn.Module):
         self.drop_path_rate = drop_path_rate
         self.patch_drop_rate = patch_drop_rate
 
-        # --- 在视觉 Transformer 上插入 DropPathBlock ---
-        # HF CLIPModel 的视觉部分保存在 `.vision_model.encoder.layers`
         vision = self.clip.vision_model
         encoder_layers = vision.encoder.layers  # nn.ModuleList
         self.L = len(encoder_layers)
         for idx, layer in enumerate(encoder_layers):
-            # i 从 1..L，对应论文中 i-th block 丢弃概率 = (i/L)*p_max
             p_i = (idx + 1) / self.L * self.drop_path_rate
             encoder_layers[idx] = DropPathBlock_trans(layer, p_i)
 
     def get_image_features(self, pixel_values=None, images=None):
-        # 1) 预处理：支持已预处理 tensor 或 PIL 列表
         if pixel_values is None:
             pixel_values = self.proc(images=images, return_tensors="pt").pixel_values
         x = pixel_values.to(next(self.clip.parameters()).device)
 
         B, C, H, W = x.shape
-        # --- PatchDrop ---
-        # 取 patch 大小（HF CLIP 默认 patch_size 存在于 vision.embeddings.patch_size）
+       
         Ps = self.clip.config.vision_config
         P = Ps.patch_size if isinstance(Ps.patch_size, int) else Ps.patch_size[0]
         nH, nW = H // P, W // P
-        # 需要丢弃的 patch 数
+        
         num_drop = int(self.patch_drop_rate * nH * nW + 0.5)
         for b in range(B):
             idxs = random.sample(range(nH * nW), num_drop)
@@ -150,7 +137,6 @@ class RegularizedTransformersCLIPWrapper(nn.Module):
                 i, j = divmod(idx, nW)
                 x[b, :, i*P:(i+1)*P, j*P:(j+1)*P] = 0.0
 
-        # 2) 前向：调用 transformers.CLIPModel 自带的 get_image_features
         feats = self.clip.get_image_features(pixel_values=x)
         feats = feats / feats.norm(dim=-1, keepdim=True)
 
@@ -186,21 +172,17 @@ class RegularizedOpenCLIPWrapper(nn.Module):
         else:
             raise RuntimeError("Cannot find vision transformer blocks in model.visual")
         
-        # 拿到所有的 blocks
         self.L = len(blocks)
 
-        # 用 DropPathBlock 包一遍
         for idx, blk in enumerate(blocks):
             p_i = (idx + 1) / self.L * self.drop_path_rate
             blocks[idx] = DropPathBlock(blk, p_i)
 
-        # 存下来，后面 patch_drop 用
         self._blocks = blocks
         self._patch_size = patch_size
 
 
     def get_image_features(self, pixel_values=None, images=None):
-        # —— preprocess …… 同你原来写的 —— 
         if pixel_values is not None:
             x = pixel_values
         else:
@@ -209,7 +191,6 @@ class RegularizedOpenCLIPWrapper(nn.Module):
 
         B, C, H, W = x.shape
 
-        # —— PatchDrop —— 
         P = self._patch_size if isinstance(self._patch_size, int) else self._patch_size[0]
         nH, nW = H // P, W // P
         num_drop = int(self.patch_drop_rate * nH * nW + 0.5)
@@ -217,9 +198,7 @@ class RegularizedOpenCLIPWrapper(nn.Module):
             drop_idxs = random.sample(range(nH * nW), num_drop)
             for di in drop_idxs:
                 i, j = divmod(di, nW)
-                x[b, :, i*P:(i+1)*P, j*P:(j+1)*P] = 0.0
-
-        # —— 正常前向 和 L2 归一化 —— 
+                x[b, :, i*P:(i+1)*P, j*P:(j+1)*P] = 0.0 
         
         feats = self.model.encode_image(x)
         feats = feats / feats.norm(dim=-1, keepdim=True)
@@ -228,11 +207,9 @@ class RegularizedOpenCLIPWrapper(nn.Module):
 
     def __call__(self, *args, **kwargs):
         return self.get_image_features(*args, **kwargs)
-# ——— 纯 PyTorch、可微分的 JPEG（分开 Y/C 量化表） ———
 class DiffJPEG(nn.Module):
     def __init__(self, quality: float = 75.0):
         super().__init__()
-        # JPEG 标准亮度／色度量化表（Q50, QC50），归一到 [0,1]
         QY50 = torch.tensor([
             [16,11,10,16,24,40,51,61],
             [12,12,14,19,26,58,60,55],
@@ -254,7 +231,6 @@ class DiffJPEG(nn.Module):
             [99,99,99,99,99,99,99,99]
         ], dtype=torch.float32) / 255.0
 
-        # 根据 quality 缩放
         if quality < 50:
             scale = 5000.0 / quality
         else:
@@ -262,7 +238,6 @@ class DiffJPEG(nn.Module):
         QY = torch.clamp((QY50 * scale + 50.0) / 100.0, min=1e-2)
         QC = torch.clamp((QC50 * scale + 50.0) / 100.0, min=1e-2)
 
-        # 构造 8×8 DCT
         N = 8
         coords = torch.arange(N, dtype=torch.float32)
         i, j = torch.meshgrid(coords, coords, indexing='ij')
@@ -272,14 +247,13 @@ class DiffJPEG(nn.Module):
             math.sqrt(2.0 / N) * torch.cos(((2*j + 1) * i * math.pi) / (2 * N))
         )
 
-        # 注册成 buffer，随 .to(device) 一起移动
         self.register_buffer('QY', QY)      # [8,8]
         self.register_buffer('QC', QC)      # [8,8]
         self.register_buffer('D', D)        # [8,8]
         self.register_buffer('DT', D.t())   # [8,8]
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: [B,3,H,W],H,W 必须是 8 的倍数(外部保证 pad)
+        # x: [B,3,H,W],H,W 
         B, C, H, W = x.shape
         nH, nW = H // 8, W // 8
 
@@ -294,10 +268,8 @@ class DiffJPEG(nn.Module):
         normed = flat - 0.5
         dct = D @ normed @ DT   # [M,8,8]
 
-        # reshape 回 [B,3,nH,nW,8,8]
         dct = dct.view(B, C, nH, nW, 8, 8)
 
-        # 按通道量化:Y→QY,Cb/Cr→QC
         QY, QC = self.QY, self.QC
         q = torch.empty_like(dct)
         q[:,0] = torch.round(dct[:,0] / QY) * QY
@@ -309,7 +281,7 @@ class DiffJPEG(nn.Module):
         rec = DT @ q_flat @ D
         rec = rec + 0.5
 
-        # 重组回 [B,3,H,W]
+        # [B,3,H,W]
         rec = rec.view(B, C, nH, nW, 8, 8)
         rec = rec.permute(0,1,2,4,3,5).contiguous().view(B, C, H, W)
         return rec
@@ -323,14 +295,14 @@ class PaperAugmentation_new:
         p: float = 0.2,
         device: torch.device = torch.device('cuda')
     ):
-        self.input_size = input_size  # 模型目标输入尺寸，如 (384, 384)
+        self.input_size = input_size  
         self.epsilon = epsilon
         self.p = p
         self.device = device
         self.jpeg = DiffJPEG(quality=jpeg_quality).to(device)
 
     def apply(self, x: torch.Tensor) -> torch.Tensor:
-        # x: [1,3,H,W], 值域 [0, 1]
+        # x: [1,3,H,W]
         _, C, H, W = x.shape
         D_H, D_W = self.input_size
 
@@ -376,7 +348,7 @@ class PaperAugmentation_new:
         l, t, r, b = pad
         x = x[..., t:t+H2, l:l+W2]
 
-        return x  # [1,3,H',W']，仍在 [0,1] 空间
+        return x  
 
 class PairedContrastiveDataset_299(Dataset):
     def __init__(
@@ -405,13 +377,13 @@ class PairedContrastiveDataset_299(Dataset):
         self.image_extension = image_extension
         self.transform = transform
 
-        # 1. 从 CSV 加载映射
+        # 从 CSV 加载映射
         df = pd.read_csv(csv_file, dtype={'ImageId': str})
         required_cols = ['ImageId', 'TrueLabel', 'TargetClass']
         assert all(c in df.columns for c in required_cols), \
             f"CSV 文件必须包含列: {required_cols}"
 
-        # 2. 构建样本列表
+        # 构建样本列表
         self.samples = []
         for _, row in df.iterrows():
             image_id = row['ImageId']
@@ -473,41 +445,6 @@ class PairedContrastiveDataset_299(Dataset):
             'tgt_class': entry['tgt_label'],
             'image_id': os.path.basename(entry['image_path'])
         }
-
-
-
-    def forward_feats(self, x_adv_norm: torch.Tensor,
-                      pos_feats: torch.Tensor,
-                      neg_feats: torch.Tensor) -> torch.Tensor:
-        """
-        :param x_adv_norm: [B,3,H,W]  归一化后的对抗图像
-        :param pos_feats:   [B,N_pos,D]  已缓存并 L2 归一化的正例特征
-        :param neg_feats:   [B,N_neg,D]  已缓存并 L2 归一化的负例特征
-        """
-        B, N_pos, D = pos_feats.shape
-        N_neg = neg_feats.shape[1]
-
-        # 1) 编码对抗样本、并 L2 归一化
-        adv_feats = self.clip_model.get_image_features(pixel_values=x_adv_norm)  # [B,D]
-        adv_feats = F.normalize(adv_feats, dim=-1)
-
-        # 2) 计算余弦相似度（点积即可）
-        sim_pos = torch.einsum('bd,bpd->bp', adv_feats, pos_feats) / self.temp
-        sim_neg = torch.einsum('bd,bnd->bn', adv_feats, neg_feats) / self.temp
-
-        # 3) 合并、log-softmax
-        sim = torch.cat([sim_pos, sim_neg], dim=1)                        # [B, N_pos+N_neg]
-        logp = sim - torch.logsumexp(sim, dim=1, keepdim=True)
-
-        # 4) 正例 Top-K、负例均值
-        topk_vals, _ = torch.topk(logp[:, :N_pos], k=self.top_k, dim=1)
-        loss_pos = - topk_vals.mean()    # ≥ 0
-        loss_neg =   logp[:, N_pos:].mean()  # ≤ 0
-
-        total_loss = loss_pos + loss_neg
-        print(f'Loss Pos:{loss_pos.item():.4f}, Loss Neg:{loss_neg.item():.4f}, Total Loss:{total_loss.item():.4f}')
-        logging.info(f'Loss Pos:{loss_pos.item():.4f}, Loss Neg:{loss_neg.item():.4f}, Total Loss:{total_loss.item():.4f}')
-        return total_loss
 
 class VisualContrastiveLoss_enhance_PCA(nn.Module):
     def __init__(self, clip_model, pca_space, temp=0.1, top_k=10, top_m=10, margin=0.2, lambda_margin=2.0):
@@ -621,7 +558,7 @@ def attack_pipeline():
     
     logging.basicConfig(
         filename=args.log_file_path,
-        filemode='a',  # 追加模式
+        filemode='a', 
         format='[%(asctime)s] %(levelname)s: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
         level=logging.INFO
