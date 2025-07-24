@@ -65,6 +65,33 @@ pip install -r requirements.txt
 ```
 
 ## 🚀 Running the Attack
+To run the attack pipeline, make sure you have prepared both the dataset and the surrogate models as follows:
+
+---
+### 📂 Required Dataset
+We use two datasets in our attack pipeline:
+#### 1. NIPS 2017 Adversarial Attack Dataset
+We use 1,000 clean images from the [**NIPS 2017 Adversarial Attack and Defense Competition**], which is based on ImageNet.
+- 🔗 Download link (Kaggle):  
+  https://tianchi.aliyun.com/dataset/88668
+These serve as clean input images to be attacked.
+---
+#### 2. ImageNet-1K Validation Set (Reference Pool)
+We use the full [**ImageNet-1K validation set**](50,000 images) as a reference pool for contrastive supervision.
+- 🔗 Download link (Kaggle):  
+  https://www.kaggle.com/datasets/sautkin/imagenet1kvalid
+- 🔧 Preprocess the downloaded images using:
+```bash
+python tools/process_imagenet.py
+```
+
+---
+### 🤖 Required Surrogate Models
+Our method relies on an ensemble of frozen CLIP-based vision encoders. (Models can be auto-downloaded or loaded from local path by setting config.)
+<p align="center">
+  <img src="./image/readme/tablef2.png" alt="Surrogate Models" width="800"/>
+</p>
+
 ```bash
 python vcp_attack.py
 ```
@@ -72,7 +99,8 @@ python vcp_attack.py
 ## 🧪 Evaluation
 ```bash
 cd evaluation
-python evaluate_captions_1000.py
+python _internVL3-14b_img2txt.py --img_path your generated adversarial examples path --output_path output txt path --txt_name txt name #(model you want to evaluate)# 
+python evaluate_captions_1000.py --attack_text_path your txt path --output_path your output path
 ```
 ## 🙏 Acknowledgements
 We gratefully acknowledge the open-source community and previous research efforts for their invaluable contributions. This project builds upon the foundations laid by the following works:
