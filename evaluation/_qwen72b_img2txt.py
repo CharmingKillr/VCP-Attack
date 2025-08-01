@@ -17,7 +17,6 @@ from qwen_vl_utils import process_vision_info
 # from accelerate import init_empty_weights
 
 # seed for everything
-# credit: https://www.kaggle.com/code/rhythmcam/random-seed-everything
 DEFAULT_RANDOM_SEED = 2023
 
 # basic random seed

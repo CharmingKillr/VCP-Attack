@@ -509,7 +509,6 @@ def attack_pipeline():
     'convnext_xxlarge':{'weights_path':'laion/CLIP-convnext_xxlarge-laion2B-s34B-b82K-augreg/open_clip_pytorch_model.bin',}
     }
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_path', default='/seu_nvme/home/230239304/dataset/ImageNet_val_1000', help='ImageNet数据集路径')
     parser.add_argument('--clip_models', nargs='+', default=['CLIP-ViT-bigG-14','DFN5B-CLIP-ViT-H-14-378','metaclip-h14-fullcc2.5b'], help='CLIP模型名称')
     #parser.add_argument('--clip_models', nargs='+', default=['CLIP-ViT-bigG-14','DFN5B-CLIP-ViT-H-14-378'], help='CLIP模型名称')
     parser.add_argument('--open_clip_models', nargs='+', default=['ViT-H-14-CLIPA-336','ViT-SO400M-14-SigLIP','ViT-H-14','ViT-SO400M-14-SigLIP-384','convnext_xxlarge'], help='CLIP模型名称')

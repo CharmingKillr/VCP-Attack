@@ -13,7 +13,6 @@ from torch.nn.utils.rnn import pad_sequence
 
 
 # seed for everything
-# credit: https://www.kaggle.com/code/rhythmcam/random-seed-everything
 DEFAULT_RANDOM_SEED = 2023
 
 # basic random seed

@@ -9,7 +9,6 @@ import torch
 import torchvision
 import numpy as np
 # seed for everything
-# credit: https://www.kaggle.com/code/rhythmcam/random-seed-everything
 DEFAULT_RANDOM_SEED = 2023
 
 # basic random seed
@@ -86,11 +85,10 @@ def run_gemini_captioning(out_file, dataloader=None, prompt=None, max_tokens=Non
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Gemini Image Captioning Script")
-    parser.add_argument("--img_path", default='/data/jw/mnt/mount/VCP-Attack/output_adv_images/AttackVLM', type=str)
+    parser.add_argument("--img_path", default='your adversarial examples path', type=str)
     parser.add_argument("--query", default='Briefly describe the content of this image in no more than three sentences.', type=str)
 
-    parser.add_argument("--output_path", default="/data/jw/mnt/mount/VCP-Attack/output_adv_captions_1000/gemini-2.5-flash", type=str)
-    #parser.add_argument("--txt_name", default='enhance_pca_10_1000_8_128_eps16_steps240_0.8max.txt', type=str)
+    parser.add_argument("--output_path", default="../data/gemini-2.5-flash", type=str)
     parser.add_argument("--txt_name", default='AttackVLM.txt', type=str) # AttackVLM M_Attack AdvDiffVLM Any_Attack FOA_Attack
     parser.add_argument("--batch_size", default=1, type=int)
     parser.add_argument("--num_samples", default=1000, type=int)

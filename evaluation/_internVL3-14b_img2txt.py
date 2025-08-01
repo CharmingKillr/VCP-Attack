@@ -15,7 +15,6 @@ from torchvision.transforms.functional import InterpolationMode
 import torchvision.transforms as T
 
 # seed for everything
-# credit: https://www.kaggle.com/code/rhythmcam/random-seed-everything
 DEFAULT_RANDOM_SEED = 2023
 
 # basic random seed
