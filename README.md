@@ -60,6 +60,22 @@ Our method enhances semantic consistency across multiple models via adaptive sub
 
 ---
 
+
+## 🗂️ Project Structure
+
+```
+VCP-Attack/
+├── vcpattack/                # Core attack implementation package
+│   ├── attack.py             # Main attack pipeline
+│   └── pca.py                # Adaptive PCA projection module
+├── vcp_attack.py             # Backward-compatible CLI entrypoint
+├── pca_m.py                  # Backward-compatible import shim
+├── evaluation/               # Caption generation + ASR evaluation scripts
+├── tools/                    # Dataset preprocessing helpers
+├── image/readme/             # README figures
+└── VCP-ATTACK-Examples-100/  # Released adversarial examples
+```
+
 ## 📦 Requirements
 
 To install dependencies, use:
