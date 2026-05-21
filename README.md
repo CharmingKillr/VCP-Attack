@@ -5,7 +5,11 @@
 
 📌 **Update**: This project has been **Accepted by CVPR 2026** .
 
+The full paper and appendix are available in the [`full_paper`](full_paper) directory of this project:  
 
+- [Full Paper PDF](full_paper/VCP-Attack Visual-Contrastive Projection for Transferable Black-Box Targeted Attacks on Large Vision-Language Models.pdf)  
+
+- [Appendix PDF](full_paper/Appendix.pdf)
 ---
 
 ## 🔥 Overview
